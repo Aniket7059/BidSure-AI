@@ -255,9 +255,8 @@ export function DashboardPage() {
               Attention Required
             </p>
             <h3
-              className={`text-3xl font-bold tracking-tight ${
-                attentionItems.length > 0 ? "text-amber-600" : "text-slate-900"
-              }`}
+              className={`text-3xl font-bold tracking-tight ${attentionItems.length > 0 ? "text-amber-600" : "text-slate-900"
+                }`}
             >
               {attentionItems.length}
             </h3>
@@ -342,8 +341,8 @@ export function DashboardPage() {
                         bid.compliance_status === "NON COMPLIANT" || bid.compliance_status === "NON_COMPLIANT" || bid.compliance_status === "FAIL"
                           ? "bg-rose-100 text-rose-800 border-rose-300 font-bold text-xs px-2.5 py-0.5"
                           : bid.compliance_status === "COMPLIANT" || bid.compliance_status === "PASS"
-                          ? "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-xs px-2.5 py-0.5"
-                          : "bg-amber-100 text-amber-800 border-amber-300 font-bold text-xs px-2.5 py-0.5"
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-xs px-2.5 py-0.5"
+                            : "bg-amber-100 text-amber-800 border-amber-300 font-bold text-xs px-2.5 py-0.5"
                       }
                     >
                       {bid.compliance_status || "NON COMPLIANT"}

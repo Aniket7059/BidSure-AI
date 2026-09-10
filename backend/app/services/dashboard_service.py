@@ -36,6 +36,9 @@ from app.schemas.dashboard import (
     TenderDashboardResponse,
     TenderDashboardSummary,
     VerificationCountBreakdown,
+    GlobalActionRequiredItem,
+    GlobalDashboardOverviewResponse,
+    GlobalTenderPreviewItem,
 )
 
 logger = logging.getLogger(__name__)
@@ -594,6 +597,120 @@ class DashboardService:
             total_bids=len(bid_items),
             page=page_num,
             page_size=limit,
+        )
+
+    def get_global_overview(
+        self,
+        db: Session,
+    ) -> GlobalDashboardOverviewResponse:
+        """
+        Calculates pure read-only aggregate metrics for the top-level Procurement Officer Dashboard.
+        100% derived from real database records.
+        """
+        tenders_stmt = (
+            select(Tender)
+            .options(selectinload(Tender.submissions))
+            .order_by(Tender.created_at.desc())
+        )
+        all_tenders = list(db.scalars(tenders_stmt).all())
+        active_tenders_count = sum(1 for t in all_tenders if (t.status or "").upper() not in ("CLOSED", "CANCELLED", "ARCHIVED"))
+
+        active_tenders_preview: list[GlobalTenderPreviewItem] = []
+        for t in all_tenders[:5]:
+            active_tenders_preview.append(
+                GlobalTenderPreviewItem(
+                    id=t.id,
+                    reference_number=t.reference_number,
+                    title=t.title,
+                    status=t.status,
+                    bids_count=len(t.submissions or []),
+                    created_at=t.created_at,
+                )
+            )
+
+        submissions_stmt = (
+            select(BidSubmission)
+            .options(
+                selectinload(BidSubmission.tender),
+                selectinload(BidSubmission.bidder),
+                selectinload(BidSubmission.compliance_assessments),
+                selectinload(BidSubmission.discrepancies),
+                selectinload(BidSubmission.procurement_decision),
+            )
+            .order_by(BidSubmission.created_at.desc())
+        )
+        all_submissions = list(db.scalars(submissions_stmt).all())
+
+        bids_under_review_count = 0
+        attention_required_count = 0
+        awaiting_decision_count = 0
+        status_distribution = {"COMPLIANT": 0, "NON_COMPLIANT": 0, "REVIEW": 0, "PENDING": 0}
+
+        action_items: list[GlobalActionRequiredItem] = []
+
+        for sub in all_submissions:
+            latest_ass: ComplianceAssessment | None = None
+            if sub.compliance_assessments:
+                latest_ass = max(
+                    sub.compliance_assessments,
+                    key=lambda a: (a.assessed_at or a.created_at, a.id),
+                )
+
+            comp_status = (latest_ass.status if latest_ass else "PENDING").upper()
+            if comp_status in status_distribution:
+                status_distribution[comp_status] += 1
+            else:
+                status_distribution["PENDING"] += 1
+
+            has_decision = sub.procurement_decision is not None
+            if not has_decision:
+                awaiting_decision_count += 1
+
+            open_discs = [d for d in (sub.discrepancies or []) if d.status == "OPEN"]
+            has_attention_flag = (
+                comp_status in ("NON_COMPLIANT", "REVIEW")
+                or len(open_discs) > 0
+                or (latest_ass and (latest_ass.risk_level or "").upper() in ("HIGH", "CRITICAL"))
+            )
+
+            if has_attention_flag and not has_decision:
+                attention_required_count += 1
+
+            if comp_status in ("REVIEW", "PENDING") or (not has_decision and sub.status != "DRAFT"):
+                bids_under_review_count += 1
+
+            if has_attention_flag or not has_decision:
+                reason_str = "Awaiting decision"
+                if open_discs:
+                    reason_str = f"{len(open_discs)} open discrepancy/mismatch flagged"
+                elif comp_status == "NON_COMPLIANT":
+                    reason_str = "Failed mandatory compliance checks"
+                elif comp_status == "REVIEW":
+                    reason_str = "Requires officer manual review"
+                elif latest_ass and latest_ass.risk_level in ("HIGH", "CRITICAL"):
+                    reason_str = f"Elevated {latest_ass.risk_level} risk score detected"
+
+                action_items.append(
+                    GlobalActionRequiredItem(
+                        bid_submission_id=sub.id,
+                        tender_id=sub.tender_id,
+                        tender_reference=sub.tender.reference_number if sub.tender else "N/A",
+                        bidder_name=sub.bidder.company_name if sub.bidder else f"Bidder #{sub.bidder_id}",
+                        compliance_status=comp_status,
+                        risk_level=latest_ass.risk_level if latest_ass else "PENDING",
+                        reason=reason_str,
+                        open_discrepancies=len(open_discs),
+                    )
+                )
+
+        return GlobalDashboardOverviewResponse(
+            active_tenders=active_tenders_count,
+            bids_under_review=bids_under_review_count,
+            attention_required=attention_required_count,
+            awaiting_decision=awaiting_decision_count,
+            action_required_items=action_items[:5],
+            active_tenders_preview=active_tenders_preview,
+            status_distribution=status_distribution,
         )
 
 

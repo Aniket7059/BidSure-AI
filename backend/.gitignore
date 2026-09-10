@@ -17,17 +17,11 @@ env/
 .idea/
 
 # Database
-*.db
-*.sqlite
-*.sqlite3
+
 
 # Logs
 *.log
 
 # OS files
-.DS_Store
-Thumbs.db
 
-# Storage / Runtime uploads
-storage/
-storage/documents/
+

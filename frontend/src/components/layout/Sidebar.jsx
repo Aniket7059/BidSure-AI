@@ -3,10 +3,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
-  ClipboardCheck,
-  Files,
-  ShieldCheck,
-  BadgeCheck,
   History,
   Settings,
   Shield,
@@ -25,18 +21,18 @@ const mainNavItems = [
     icon: LayoutDashboard,
   },
   {
-    title: "Tenders",
+    title: "Tenders & Bids",
     href: "/tenders",
     icon: FileText,
-  },
-  {
-    title: "Bids",
-    href: "/bids/1",
-    icon: ClipboardCheck,
   },
 ];
 
 const secondaryNavItems = [
+  {
+    title: "System Audit Trail",
+    href: "/audit-logs",
+    icon: History,
+  },
   {
     title: "Settings",
     href: "/settings",

@@ -2,6 +2,14 @@ import { api } from "../../services/api";
 
 export const dashboardApi = {
   /**
+   * Fetch top-level global aggregate dashboard overview metrics.
+   */
+  getGlobalOverview: async () => {
+    const response = await api.get("/dashboard/overview");
+    return response.data;
+  },
+
+  /**
    * Fetch all tenders (used for selector and active tender count)
    */
   getTenders: async () => {

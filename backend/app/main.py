@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -27,10 +27,6 @@ from app.services.evaluators.register import register_evaluators
 from app.providers.register import register_providers
 
 
-# # Create all tables
-# Base.metadata.create_all(bind=engine)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -38,26 +34,12 @@ async def lifespan(app: FastAPI):
 
     Requirement evaluators and verification providers are
     registered when the application starts.
+    Schema migrations are managed by Alembic.
     """
-
-    # --------------------------------------------------
-    # Startup
-    # --------------------------------------------------
-
-    from app.database.base import Base
-    from app.database.session import engine
-
-    Base.metadata.create_all(bind=engine)
     register_evaluators()
     register_providers()
 
     yield
-
-    # --------------------------------------------------
-    # Shutdown
-    # --------------------------------------------------
-
-    # Reserved for future cleanup logic.
 
 
 app = FastAPI(
@@ -70,10 +52,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -124,9 +103,14 @@ def health_check():
 def database_health_check(
     db: Session = Depends(get_db),
 ):
-    db.execute(text("SELECT 1"))
-
-    return {
-        "status": "healthy",
-        "database": "connected",
-    }
+    try:
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "healthy",
+            "database": "connected",
+        }
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="Database connection unavailable",
+        )

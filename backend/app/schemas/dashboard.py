@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Section 1: Bid Submission & Tender & Bidder Metadata ---
@@ -37,9 +37,6 @@ class DashboardBidderInfo(BaseModel):
 
 
 # --- Section 2: Count Breakdowns & Summary ---
-
-from pydantic import BaseModel, ConfigDict, Field
-
 
 class RequirementCountBreakdown(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -242,3 +239,33 @@ class TenderDashboardResponse(BaseModel):
     total_bids: int = 0
     page: int = 1
     page_size: int = 50
+
+
+class GlobalActionRequiredItem(BaseModel):
+    bid_submission_id: int
+    tender_id: int
+    tender_reference: str
+    bidder_name: str
+    compliance_status: str | None = None
+    risk_level: str | None = None
+    reason: str | None = None
+    open_discrepancies: int = 0
+
+
+class GlobalTenderPreviewItem(BaseModel):
+    id: int
+    reference_number: str
+    title: str
+    status: str
+    bids_count: int = 0
+    created_at: datetime
+
+
+class GlobalDashboardOverviewResponse(BaseModel):
+    active_tenders: int = 0
+    bids_under_review: int = 0
+    attention_required: int = 0
+    awaiting_decision: int = 0
+    action_required_items: list[GlobalActionRequiredItem] = Field(default_factory=list)
+    active_tenders_preview: list[GlobalTenderPreviewItem] = Field(default_factory=list)
+    status_distribution: dict[str, int] = Field(default_factory=dict)

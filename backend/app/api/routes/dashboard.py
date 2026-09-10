@@ -6,6 +6,7 @@ from app.database.session import get_db
 from app.schemas.dashboard import (
     BidEvaluationDashboardResponse,
     TenderDashboardResponse,
+    GlobalDashboardOverviewResponse,
 )
 from app.services.dashboard_service import dashboard_service
 
@@ -14,6 +15,26 @@ router = APIRouter(
     tags=["Dashboard"],
     dependencies=[Depends(require_role("PROCUREMENT_OFFICER", "ADMIN"))],
 )
+
+
+@router.get(
+    "/overview",
+    response_model=GlobalDashboardOverviewResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_global_dashboard_overview(
+    db: Session = Depends(get_db),
+):
+    """
+    Returns global aggregate metrics for the Procurement Officer Dashboard overview.
+    """
+    try:
+        return dashboard_service.get_global_overview(db)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
 
 
 @router.get(

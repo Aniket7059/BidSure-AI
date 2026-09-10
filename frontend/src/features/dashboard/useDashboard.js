@@ -2,6 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "./api";
 
 /**
+ * Hook to fetch top-level global aggregate dashboard metrics.
+ */
+export function useGlobalDashboardOverviewQuery() {
+  return useQuery({
+    queryKey: ["dashboard", "global-overview"],
+    queryFn: () => dashboardApi.getGlobalOverview(),
+  });
+}
+
+/**
  * Hook to fetch all tenders from backend.
  */
 export function useTendersQuery() {
