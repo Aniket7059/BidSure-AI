@@ -27,3 +27,7 @@ env/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Storage / Runtime uploads
+storage/
+storage/documents/

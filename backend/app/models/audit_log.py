@@ -29,6 +29,12 @@ class AuditLog(Base):
         index=True,
     )
 
+    bid_submission_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        index=True,
+    )
+
     action: Mapped[str] = mapped_column(
         String(100),
         nullable=False,

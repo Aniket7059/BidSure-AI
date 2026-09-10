@@ -12,6 +12,28 @@ from app.services.rag import requirement_service as requirement_service_module
 import app.api.routes.tenders as tenders_route_module
 
 
+import pytest
+from app.api.dependencies import get_current_user
+from app.models.user import User
+
+
+def mock_get_current_user():
+    return User(
+        id=1,
+        full_name="Test Officer",
+        email="officer@test.com",
+        role="PROCUREMENT_OFFICER",
+        is_active=True,
+    )
+
+
+@pytest.fixture(autouse=True)
+def override_auth():
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
+
+
 client = TestClient(app)
 
 

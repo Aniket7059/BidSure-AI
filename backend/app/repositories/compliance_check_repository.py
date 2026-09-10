@@ -69,6 +69,22 @@ class ComplianceCheckRepository:
             .all()
         )
 
+    def get_by_submission_and_requirement(
+        self,
+        db: Session,
+        bid_submission_id: int,
+        tender_requirement_id: int,
+    ) -> ComplianceCheck | None:
+
+        return (
+            db.query(ComplianceCheck)
+            .filter(
+                ComplianceCheck.bid_submission_id == bid_submission_id,
+                ComplianceCheck.tender_requirement_id == tender_requirement_id,
+            )
+            .first()
+        )
+
     def update(
         self,
         db: Session,

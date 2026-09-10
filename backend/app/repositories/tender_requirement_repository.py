@@ -11,6 +11,7 @@ class TenderRequirementRepository:
         db: Session,
         tender_id: int,
         requirement_data: TenderRequirementCreate,
+        user_id: int | None = None,
     ) -> TenderRequirement:
 
         requirement = TenderRequirement(
@@ -21,6 +22,24 @@ class TenderRequirementRepository:
         db.add(requirement)
         db.commit()
         db.refresh(requirement)
+
+        from app.core.audit_actions import AuditAction, AuditEntityType
+        from app.services.audit_log_service import audit_log_service
+
+        audit_log_service.record_event(
+            db=db,
+            action=AuditAction.REQUIREMENT_CREATED,
+            entity_type=AuditEntityType.TENDER_REQUIREMENT,
+            entity_id=requirement.id,
+            user_id=user_id,
+            new_value={
+                "tender_id": tender_id,
+                "requirement_type": requirement.requirement_type,
+                "requirement_name": requirement.requirement_name,
+                "is_required": getattr(requirement, "is_required", True),
+            },
+            details=f"Requirement '{requirement.requirement_name}' created for tender #{tender_id}",
+        )
 
         return requirement
 

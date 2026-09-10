@@ -54,6 +54,12 @@ class BidDocument(Base):
         nullable=True,
     )
 
+    file_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+    )
+
     status: Mapped[str] = mapped_column(
         String(50),
         nullable=False,

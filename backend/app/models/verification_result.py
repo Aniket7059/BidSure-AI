@@ -59,6 +59,13 @@ class VerificationResult(Base):
         index=True,
     )
 
+    source_mode: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="SYNTHETIC",
+        index=True,
+    )
+
     verified_data: Mapped[dict | None] = mapped_column(
         JSON,
         nullable=True,
@@ -95,3 +102,16 @@ class VerificationResult(Base):
         "BidDocument",
         back_populates="verification_results",
     )
+
+    @property
+    def source(self) -> str:
+        return self.provider
+
+    @property
+    def requirement_type(self) -> str:
+        from app.providers.schemas import map_to_requirement_type
+        return map_to_requirement_type(self.verification_type or self.provider)
+
+    @property
+    def status(self) -> str:
+        return self.verification_status

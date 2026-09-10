@@ -9,6 +9,20 @@ from app.api.routes.bid_documents import router
 from app.database.session import get_db
 
 
+from app.api.dependencies import get_current_user
+from app.models.user import User
+
+
+def mock_get_current_user():
+    return User(
+        id=1,
+        full_name="Test Officer",
+        email="officer@test.com",
+        role="PROCUREMENT_OFFICER",
+        is_active=True,
+    )
+
+
 def create_test_app():
     app = FastAPI()
     app.include_router(router)
@@ -16,6 +30,7 @@ def create_test_app():
     db = Mock()
 
     app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = mock_get_current_user
 
     return app, db
 
@@ -45,50 +60,58 @@ def test_process_document_returns_extraction():
         created_at=datetime.now(timezone.utc),
     )
 
+    orig_get_by_id = bid_documents.bid_document_repository.get_by_id
+    orig_process_doc = bid_documents.document_processing_service.process_document
+
     bid_documents.bid_document_repository.get_by_id = Mock(
         return_value=document,
     )
-
     bid_documents.document_processing_service.process_document = Mock(
         return_value=extraction,
     )
 
-    client = TestClient(app)
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/bid-submissions/documents/1/process",
+        )
 
-    response = client.post(
-        "/bid-submissions/documents/1/process",
-    )
+        assert response.status_code == 200
 
-    assert response.status_code == 200
+        data = response.json()
 
-    data = response.json()
+        assert data["id"] == 10
+        assert data["bid_document_id"] == 1
+        assert data["extraction_status"] == "COMPLETED"
 
-    assert data["id"] == 10
-    assert data["bid_document_id"] == 1
-    assert data["extraction_status"] == "COMPLETED"
-
-    bid_documents.document_processing_service.process_document.assert_called_once_with(
-        db=db,
-        bid_document_id=1,
-        file_path="uploads/gst_certificate.pdf",
-    )
+        bid_documents.document_processing_service.process_document.assert_called_once_with(
+            db=db,
+            bid_document_id=1,
+            file_path="uploads/gst_certificate.pdf",
+        )
+    finally:
+        bid_documents.bid_document_repository.get_by_id = orig_get_by_id
+        bid_documents.document_processing_service.process_document = orig_process_doc
 
 
 def test_process_document_returns_404_when_document_not_found():
     app, _ = create_test_app()
 
+    orig_get_by_id = bid_documents.bid_document_repository.get_by_id
     bid_documents.bid_document_repository.get_by_id = Mock(
         return_value=None,
     )
 
-    client = TestClient(app)
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/bid-submissions/documents/999/process",
+        )
 
-    response = client.post(
-        "/bid-submissions/documents/999/process",
-    )
-
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Bid document not found."
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Bid document not found."
+    finally:
+        bid_documents.bid_document_repository.get_by_id = orig_get_by_id
 
 
 def test_get_document_extraction_returns_latest_extraction():
@@ -116,6 +139,7 @@ def test_get_document_extraction_returns_latest_extraction():
         created_at=datetime.now(timezone.utc),
     )
 
+    orig_get_by_id = bid_documents.bid_document_repository.get_by_id
     bid_documents.bid_document_repository.get_by_id = Mock(
         return_value=document,
     )
@@ -154,6 +178,7 @@ def test_get_document_extraction_returns_latest_extraction():
         )
 
     finally:
+        bid_documents.bid_document_repository.get_by_id = orig_get_by_id
         bid_documents.DocumentExtractionRepository = (
             original_repository
         )
@@ -162,18 +187,22 @@ def test_get_document_extraction_returns_latest_extraction():
 def test_get_document_extraction_returns_404_when_document_not_found():
     app, _ = create_test_app()
 
+    orig_get_by_id = bid_documents.bid_document_repository.get_by_id
     bid_documents.bid_document_repository.get_by_id = Mock(
         return_value=None,
     )
 
-    client = TestClient(app)
+    try:
+        client = TestClient(app)
 
-    response = client.get(
-        "/bid-submissions/documents/999/extraction",
-    )
+        response = client.get(
+            "/bid-submissions/documents/999/extraction",
+        )
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Bid document not found."
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Bid document not found."
+    finally:
+        bid_documents.bid_document_repository.get_by_id = orig_get_by_id
 
 
 def test_get_document_extraction_returns_404_when_extraction_not_found():
@@ -184,6 +213,7 @@ def test_get_document_extraction_returns_404_when_extraction_not_found():
         file_path="uploads/gst_certificate.pdf",
     )
 
+    orig_get_by_id = bid_documents.bid_document_repository.get_by_id
     bid_documents.bid_document_repository.get_by_id = Mock(
         return_value=document,
     )
@@ -215,6 +245,7 @@ def test_get_document_extraction_returns_404_when_extraction_not_found():
         )
 
     finally:
+        bid_documents.bid_document_repository.get_by_id = orig_get_by_id
         bid_documents.DocumentExtractionRepository = (
             original_repository
         )

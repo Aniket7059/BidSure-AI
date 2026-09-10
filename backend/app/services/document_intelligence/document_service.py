@@ -81,6 +81,28 @@ class DocumentProcessingService:
             extraction,
         )
 
+        from app.core.audit_actions import AuditAction, AuditEntityType
+        from app.services.audit_log_service import audit_log_service
+
+        # Get bid_submission_id from BidDocument if available
+        bid_sub_id = None
+        try:
+            from app.repositories.bid_document_repository import bid_document_repository
+            doc = bid_document_repository.get_by_id(db, bid_document_id)
+            if doc:
+                bid_sub_id = getattr(doc, "bid_submission_id", None)
+        except Exception:
+            pass
+
+        audit_log_service.record_event(
+            db=db,
+            action=AuditAction.DOCUMENT_PROCESSING_STARTED,
+            entity_type=AuditEntityType.BID_DOCUMENT,
+            entity_id=bid_document_id,
+            bid_submission_id=bid_sub_id,
+            details=f"Document processing started for bid_document #{bid_document_id}",
+        )
+
         try:
             result = self.orchestrator.process(
                 file_path
@@ -94,6 +116,33 @@ class DocumentProcessingService:
             db.commit()
             db.refresh(extraction)
 
+            audit_log_service.record_event(
+                db=db,
+                action=AuditAction.DOCUMENT_PROCESSING_COMPLETED,
+                entity_type=AuditEntityType.BID_DOCUMENT,
+                entity_id=bid_document_id,
+                bid_submission_id=bid_sub_id,
+                new_value={
+                    "document_type": result.document_type.value,
+                    "confidence": result.classification_confidence,
+                    "pages": result.total_pages,
+                },
+                details=f"Document processing completed for bid_document #{bid_document_id}",
+            )
+
+            audit_log_service.record_event(
+                db=db,
+                action=AuditAction.DOCUMENT_EXTRACTION_CREATED,
+                entity_type=AuditEntityType.DOCUMENT_EXTRACTION,
+                entity_id=extraction.id,
+                bid_submission_id=bid_sub_id,
+                new_value={
+                    "extraction_id": extraction.id,
+                    "confidence_score": extraction.confidence_score,
+                },
+                details=f"Document extraction #{extraction.id} created for bid_document #{bid_document_id}",
+            )
+
             return extraction
 
         except Exception as exc:
@@ -104,6 +153,15 @@ class DocumentProcessingService:
 
             db.commit()
             db.refresh(extraction)
+
+            audit_log_service.record_event(
+                db=db,
+                action=AuditAction.DOCUMENT_PROCESSING_FAILED,
+                entity_type=AuditEntityType.BID_DOCUMENT,
+                entity_id=bid_document_id,
+                bid_submission_id=bid_sub_id,
+                details=f"Document processing failed for bid_document #{bid_document_id}: {exc}",
+            )
 
             return extraction
 

@@ -1,7 +1,9 @@
+from app.core.taxonomy import RequirementType
 from app.schemas.compliance_evaluation import (
     ComplianceEvaluationRequest,
     ComplianceEvaluationResult,
 )
+from app.schemas.document_extraction import get_extracted_fields
 from app.services.evaluators.base import (
     RequirementEvaluator,
 )
@@ -19,7 +21,7 @@ class GSTEvaluator(RequirementEvaluator):
 
     @property
     def requirement_type(self) -> str:
-        return "GST"
+        return RequirementType.GST.value
 
     def evaluate(
         self,
@@ -28,6 +30,7 @@ class GSTEvaluator(RequirementEvaluator):
 
         extracted_data = request.extracted_data or {}
         verification_data = request.verification_data or {}
+        fields = get_extracted_fields(extracted_data)
 
         # --------------------------------------------------
         # 1. Check whether any GST evidence exists
@@ -44,7 +47,10 @@ class GSTEvaluator(RequirementEvaluator):
         # 2. Extract GSTIN from available evidence
         # --------------------------------------------------
 
-        document_gstin = extracted_data.get("gstin")
+        v_cfg = self.get_validation_config(request)
+        required_state_code = v_cfg.get("required_state_code") or v_cfg.get("state_code")
+
+        document_gstin = fields.get("gstin")
         verified_gstin = verification_data.get("gstin")
 
         # --------------------------------------------------
@@ -69,6 +75,23 @@ class GSTEvaluator(RequirementEvaluator):
             )
 
         gstin = verified_gstin or document_gstin
+
+        # --------------------------------------------------
+        # 3b. Check tender-specific state code requirement
+        # --------------------------------------------------
+
+        if required_state_code and gstin:
+            gstin_state = str(gstin)[:2]
+            if gstin_state != str(required_state_code):
+                return ComplianceEvaluationResult(
+                    status="FAIL",
+                    reason=f"GSTIN state code ({gstin_state}) does not match tender requirement ({required_state_code}).",
+                    evidence={
+                        "gstin": gstin,
+                        "gstin_state": gstin_state,
+                        "required_state_code": required_state_code,
+                    },
+                )
 
         # --------------------------------------------------
         # 4. Check verification status
@@ -96,7 +119,9 @@ class GSTEvaluator(RequirementEvaluator):
             "return_filing_status"
         )
 
-        if return_filing_status == "NON_COMPLIANT":
+        require_return_filing = v_cfg.get("require_return_filing", v_cfg.get("require_return_filing_compliant", True))
+
+        if return_filing_status == "NON_COMPLIANT" and require_return_filing:
             return ComplianceEvaluationResult(
                 status="FAIL",
                 reason="GST return filing is non-compliant.",

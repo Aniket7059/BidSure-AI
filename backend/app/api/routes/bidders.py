@@ -6,9 +6,12 @@ from app.repositories.bidder_repository import bidder_repository
 from app.schemas.bidder import BidderCreate, BidderResponse
 
 
+from app.api.dependencies import require_role
+
 router = APIRouter(
     prefix="/bidders",
     tags=["Bidders"],
+    dependencies=[Depends(require_role("PROCUREMENT_OFFICER", "ADMIN"))],
 )
 
 

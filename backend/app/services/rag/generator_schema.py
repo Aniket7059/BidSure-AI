@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from app.core.taxonomy import RequirementType
+
 
 class ExtractedRequirement(BaseModel):
     """
@@ -7,8 +9,8 @@ class ExtractedRequirement(BaseModel):
     from tender-document context.
     """
 
-    requirement_type: str = Field(
-        min_length=1,
+    requirement_type: RequirementType = Field(
+        description="Canonical requirement type.",
     )
 
     requirement_name: str = Field(

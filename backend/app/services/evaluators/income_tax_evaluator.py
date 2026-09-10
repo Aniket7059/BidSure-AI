@@ -1,7 +1,9 @@
+from app.core.taxonomy import RequirementType
 from app.schemas.compliance_evaluation import (
     ComplianceEvaluationRequest,
     ComplianceEvaluationResult,
 )
+from app.schemas.document_extraction import get_extracted_fields
 from app.services.evaluators.base import (
     RequirementEvaluator,
 )
@@ -19,7 +21,7 @@ class IncomeTaxEvaluator(RequirementEvaluator):
 
     @property
     def requirement_type(self) -> str:
-        return "INCOME_TAX"
+        return RequirementType.INCOME_TAX.value
 
     def evaluate(
         self,
@@ -28,6 +30,7 @@ class IncomeTaxEvaluator(RequirementEvaluator):
 
         extracted_data = request.extracted_data or {}
         verification_data = request.verification_data or {}
+        fields = get_extracted_fields(extracted_data)
 
         # --------------------------------------------------
         # 1. Check whether any evidence exists
@@ -47,7 +50,7 @@ class IncomeTaxEvaluator(RequirementEvaluator):
         # 2. Extract PAN from available evidence
         # --------------------------------------------------
 
-        document_pan = extracted_data.get("pan")
+        document_pan = fields.get("pan") or fields.get("pan_number")
 
         verified_pan = verification_data.get("pan")
 
@@ -117,16 +120,38 @@ class IncomeTaxEvaluator(RequirementEvaluator):
             )
 
         # --------------------------------------------------
-        # 6. Check Income Tax compliance
+        # 6. Check Income Tax compliance & tender-specific turnover rules
         # --------------------------------------------------
 
+        v_cfg = self.get_validation_config(request)
+        min_turnover = v_cfg.get("minimum_annual_turnover") if "minimum_annual_turnover" in v_cfg else v_cfg.get("min_turnover")
+
+        if min_turnover is not None:
+            turnover_val = fields.get("annual_turnover") or verification_data.get("annual_turnover")
+            if turnover_val is not None:
+                try:
+                    t_num = float(turnover_val)
+                    m_num = float(min_turnover)
+                    if t_num < m_num:
+                        return ComplianceEvaluationResult(
+                            status="FAIL",
+                            reason=f"Declared annual turnover ({t_num}) is below tender minimum requirement ({m_num}).",
+                            evidence={
+                                "pan": pan,
+                                "annual_turnover": t_num,
+                                "minimum_annual_turnover": m_num,
+                            },
+                        )
+                except (ValueError, TypeError):
+                    pass
+
         income_tax_compliance = (
-            verification_data.get(
-                "income_tax_compliance"
-            )
+            verification_data.get("income_tax_compliance")
+            or verification_data.get("tax_compliance_status")
+            or fields.get("income_tax_compliance")
         )
 
-        if income_tax_compliance == "NON_COMPLIANT":
+        if income_tax_compliance in ("NON_COMPLIANT", "FAIL", "FAILED"):
             return ComplianceEvaluationResult(
                 status="FAIL",
                 reason=(

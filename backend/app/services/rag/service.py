@@ -118,10 +118,16 @@ class RAGService:
         to chunks belonging to that document.
         """
 
+        if source_document is not None:
+            return self.retriever.retrieve(
+                query=query,
+                top_k=top_k,
+                source_document=source_document,
+            )
+
         return self.retriever.retrieve(
             query=query,
             top_k=top_k,
-            source_document=source_document,
         )
 
     def extract_requirements(

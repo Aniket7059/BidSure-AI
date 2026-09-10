@@ -10,6 +10,7 @@ class BidSubmissionRepository:
         self,
         db: Session,
         submission_data: BidSubmissionCreate,
+        user_id: int | None = None,
     ) -> BidSubmission:
 
         submission = BidSubmission(
@@ -19,6 +20,23 @@ class BidSubmissionRepository:
         db.add(submission)
         db.commit()
         db.refresh(submission)
+
+        from app.core.audit_actions import AuditAction, AuditEntityType
+        from app.services.audit_log_service import audit_log_service
+
+        audit_log_service.record_event(
+            db=db,
+            action=AuditAction.BID_SUBMISSION_CREATED,
+            entity_type=AuditEntityType.BID_SUBMISSION,
+            entity_id=submission.id,
+            bid_submission_id=submission.id,
+            user_id=user_id,
+            new_value={
+                "tender_id": submission.tender_id,
+                "bidder_id": submission.bidder_id,
+            },
+            details=f"Bid submission #{submission.id} created for tender #{submission.tender_id}",
+        )
 
         return submission
 

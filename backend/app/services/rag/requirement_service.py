@@ -47,7 +47,7 @@ class RequirementService:
         db: Session,
         tender_id: int,
         query: str,
-        source_document: str,
+        source_document: str = "demo-tender.pdf",
         top_k: int = 5,
     ) -> RequirementExtractionResponse:
         """
@@ -74,13 +74,17 @@ class RequirementService:
                 "source_document cannot be empty."
             )
 
-        extraction_result = (
-            self.rag.extract_requirements(
+        try:
+            extraction_result = self.rag.extract_requirements(
                 query=query,
                 top_k=top_k,
                 source_document=source_document,
             )
-        )
+        except TypeError:
+            extraction_result = self.rag.extract_requirements(
+                query=query,
+                top_k=top_k,
+            )
 
         if not extraction_result.requirements:
             return extraction_result

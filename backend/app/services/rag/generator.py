@@ -34,11 +34,10 @@ Rules:
 4. Determine whether a requirement is mandatory based on
    the wording of the tender.
 
-5. Use an appropriate requirement_type such as:
+5. Use an appropriate canonical requirement_type:
    GST, UDYAM, PAN, INCOME_TAX, EPFO, ESIC,
-   STARTUP_INDIA, NSIC, OEM, LOCAL_CONTENT,
-   BLACKLISTING, EXPERIENCE, FINANCIAL, DOCUMENT,
-   or OTHER.
+   STARTUP_INDIA, NSIC, OEM_AUTHORIZATION, MAKE_IN_INDIA,
+   MCA21, DIGILOCKER, DEBARMENT, or OTHER.
 
 6. Create validation_config only when the tender provides
    information that can actually be used for validation.

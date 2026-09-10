@@ -97,3 +97,16 @@ class BidSubmission(Base):
         back_populates="bid_submission",
         cascade="all, delete-orphan",
     )
+
+    discrepancies = relationship(
+        "Discrepancy",
+        back_populates="bid_submission",
+        cascade="all, delete-orphan",
+    )
+
+    procurement_decision = relationship(
+        "ProcurementDecision",
+        back_populates="bid_submission",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )

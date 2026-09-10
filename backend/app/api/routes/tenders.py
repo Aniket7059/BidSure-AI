@@ -17,9 +17,12 @@ from app.services.rag.requirement_service import requirement_service
 from app.services.rag.service import rag_service
 from app.services.rag.generator_schema import RequirementExtractionResponse
 
+from app.api.dependencies import require_role
+
 router = APIRouter(
     prefix="/tenders",
     tags=["Tenders"],
+    dependencies=[Depends(require_role("PROCUREMENT_OFFICER", "ADMIN"))],
 )
 
 

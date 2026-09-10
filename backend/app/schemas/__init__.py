@@ -13,6 +13,11 @@ from app.schemas.bid_document import (
     BidDocumentCreate,
     BidDocumentResponse,
 )
+from app.schemas.audit_log import (
+    AuditLogCreate,
+    AuditLogResponse,
+    AuditLogListResponse,
+)
 
 
 __all__ = [
@@ -28,4 +33,7 @@ __all__ = [
     "BidSubmissionResponse",
     "BidDocumentCreate",
     "BidDocumentResponse",
+    "AuditLogCreate",
+    "AuditLogResponse",
+    "AuditLogListResponse",
 ]

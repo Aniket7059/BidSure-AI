@@ -35,7 +35,7 @@ class FakeEvaluator(RequirementEvaluator):
 
     @property
     def requirement_type(self) -> str:
-        return "TEST"
+        return "OTHER"
 
     def evaluate(
         self,
@@ -81,7 +81,7 @@ def create_test_data(db):
 
     requirement = TenderRequirement(
         tender_id=tender.id,
-        requirement_type="TEST",
+        requirement_type="OTHER",
         requirement_name="Test Requirement",
         description="Temporary requirement for testing.",
         is_required=True,
@@ -153,7 +153,7 @@ def test_missing_requirement_returns_error():
         request = ComplianceEvaluationRequest(
             bid_submission_id=submission.id,
             tender_requirement_id=999999,
-            requirement_type="TEST",
+            requirement_type="OTHER",
             requirement_name="Test Requirement",
         )
 
@@ -197,7 +197,7 @@ def test_unsupported_requirement_creates_review():
         ) = create_test_data(db)
 
         requirement.requirement_type = (
-            "UNSUPPORTED_TEST_TYPE"
+            "DIGILOCKER"
         )
 
         db.commit()
@@ -420,7 +420,7 @@ def test_requirement_must_belong_to_submission_tender():
 
         other_requirement = TenderRequirement(
             tender_id=other_tender.id,
-            requirement_type="TEST",
+            requirement_type="OTHER",
             requirement_name="Other Requirement",
             description="Requirement from another tender.",
             is_required=True,
@@ -433,7 +433,7 @@ def test_requirement_must_belong_to_submission_tender():
         request = ComplianceEvaluationRequest(
             bid_submission_id=submission.id,
             tender_requirement_id=other_requirement.id,
-            requirement_type="TEST",
+            requirement_type="OTHER",
             requirement_name="Other Requirement",
         )
 

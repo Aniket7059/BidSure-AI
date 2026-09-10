@@ -9,6 +9,8 @@ from app.models.verification_result import VerificationResult
 from app.models.compliance_check import ComplianceCheck
 from app.models.compliance_assessment import ComplianceAssessment
 from app.models.audit_log import AuditLog
+from app.models.discrepancy import Discrepancy
+from app.models.procurement_decision import ProcurementDecision
 
 __all__ = [
     "User",
@@ -22,4 +24,6 @@ __all__ = [
     "ComplianceCheck",
     "ComplianceAssessment",
     "AuditLog",
-]
+    "Discrepancy",
+    "ProcurementDecision",
+]

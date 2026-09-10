@@ -21,10 +21,18 @@ from app.services.document_intelligence.document_service import (
 )
 
 
+from app.api.dependencies import require_role
+
 router = APIRouter(
     prefix="/bid-submissions",
     tags=["Bid Documents"],
+    dependencies=[Depends(require_role("PROCUREMENT_OFFICER", "ADMIN"))],
 )
+
+
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile, status
+
+from app.services.document_upload_service import document_upload_service
 
 
 @router.post(
@@ -34,7 +42,9 @@ router = APIRouter(
 )
 def create_bid_document(
     bid_submission_id: int,
-    document_data: BidDocumentCreate,
+    file: UploadFile | None = File(None),
+    document_type: str | None = Form(None),
+    document_data: BidDocumentCreate | None = Body(None),
     db: Session = Depends(get_db),
 ):
     submission = bid_submission_repository.get_by_id(
@@ -48,10 +58,39 @@ def create_bid_document(
             detail="Bid submission not found.",
         )
 
-    return bid_document_repository.create(
-        db,
-        bid_submission_id,
-        document_data,
+    # 1. Primary path: Multipart file upload
+    if file is not None:
+        if not document_type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Form parameter 'document_type' is required for file uploads.",
+            )
+        try:
+            return document_upload_service.upload_document(
+                db=db,
+                bid_submission_id=bid_submission_id,
+                file_obj=file.file,
+                original_filename=file.filename or "unnamed_document.pdf",
+                document_type=document_type,
+                content_type=file.content_type,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            )
+
+    # 2. Fallback path for internal test fixtures / legacy creation
+    if document_data is not None:
+        return bid_document_repository.create(
+            db,
+            bid_submission_id,
+            document_data,
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Either a file upload (multipart/form-data) or document metadata (JSON) must be provided.",
     )
 
 

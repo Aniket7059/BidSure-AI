@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import  DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -39,6 +39,12 @@ class User(Base):
         String(50),
         nullable=False,
         default="PROCUREMENT_OFFICER",
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(

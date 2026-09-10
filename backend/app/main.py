@@ -7,22 +7,24 @@ from sqlalchemy.orm import Session
 import app.models
 
 from app.core.config import settings
-from app.database.base import Base
 from app.database.session import engine, get_db
 
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
+    audit_logs,
     bid_documents,
     bid_submissions,
     bidders,
     compliance,
+    dashboard,
+    discrepancies,
     tenders,
+    verification,
 )
-
-from app.services.evaluators.register import (
-    register_evaluators,
-)
+from app.api.routes.auth import router as auth_router
+from app.services.evaluators.register import register_evaluators
+from app.providers.register import register_providers
 
 
 # # Create all tables
@@ -34,15 +36,20 @@ async def lifespan(app: FastAPI):
     """
     Application startup and shutdown lifecycle.
 
-    Requirement evaluators are registered when the
-    application starts.
+    Requirement evaluators and verification providers are
+    registered when the application starts.
     """
 
     # --------------------------------------------------
     # Startup
     # --------------------------------------------------
 
+    from app.database.base import Base
+    from app.database.session import engine
+
+    Base.metadata.create_all(bind=engine)
     register_evaluators()
+    register_providers()
 
     yield
 
@@ -60,6 +67,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -71,11 +79,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# --------------------------------------------------
+# API Routers
+# --------------------------------------------------
+
 app.include_router(bidders.router)
 app.include_router(tenders.router)
 app.include_router(bid_submissions.router)
 app.include_router(bid_documents.router)
 app.include_router(compliance.router)
+app.include_router(verification.router)
+app.include_router(discrepancies.router)
+app.include_router(audit_logs.router)
+app.include_router(dashboard.router)
+app.include_router(auth_router)
+
+
+# --------------------------------------------------
+# Root
+# --------------------------------------------------
 
 @app.get("/")
 def root():
@@ -84,6 +107,10 @@ def root():
         "environment": settings.ENVIRONMENT,
     }
 
+
+# --------------------------------------------------
+# Health Checks
+# --------------------------------------------------
 
 @app.get("/health")
 def health_check():

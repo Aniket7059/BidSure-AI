@@ -1,7 +1,9 @@
+from app.core.taxonomy import RequirementType
 from app.schemas.compliance_evaluation import (
     ComplianceEvaluationRequest,
     ComplianceEvaluationResult,
 )
+from app.schemas.document_extraction import get_extracted_fields
 from app.services.evaluators.base import (
     RequirementEvaluator,
 )
@@ -19,7 +21,7 @@ class UdyamEvaluator(RequirementEvaluator):
 
     @property
     def requirement_type(self) -> str:
-        return "UDYAM"
+        return RequirementType.UDYAM.value
 
     def evaluate(
         self,
@@ -28,6 +30,7 @@ class UdyamEvaluator(RequirementEvaluator):
 
         extracted_data = request.extracted_data or {}
         verification_data = request.verification_data or {}
+        fields = get_extracted_fields(extracted_data)
 
         # --------------------------------------------------
         # 1. Check whether any Udyam evidence exists
@@ -44,7 +47,7 @@ class UdyamEvaluator(RequirementEvaluator):
         # 2. Extract Udyam number
         # --------------------------------------------------
 
-        document_udyam = extracted_data.get(
+        document_udyam = fields.get(
             "udyam_number"
         )
 
@@ -101,8 +104,31 @@ class UdyamEvaluator(RequirementEvaluator):
             )
 
         # --------------------------------------------------
-        # 5. Check enterprise status
+        # 5. Check enterprise status & tender-specific classification rules
         # --------------------------------------------------
+
+        v_cfg = self.get_validation_config(request)
+        allowed_types = v_cfg.get("allowed_enterprise_types") or v_cfg.get("enterprise_type")
+
+        if allowed_types:
+            if isinstance(allowed_types, str):
+                allowed_types = [allowed_types]
+            allowed_upper = [str(t).upper() for t in allowed_types]
+            ent_type = (
+                verification_data.get("enterprise_type")
+                or fields.get("enterprise_type")
+                or ""
+            ).upper()
+            if ent_type and ent_type not in allowed_upper:
+                return ComplianceEvaluationResult(
+                    status="FAIL",
+                    reason=f"Udyam enterprise classification ({ent_type}) is not eligible under tender requirements ({allowed_upper}).",
+                    evidence={
+                        "udyam_number": udyam_number,
+                        "enterprise_type": ent_type,
+                        "allowed_enterprise_types": allowed_upper,
+                    },
+                )
 
         enterprise_status = verification_data.get(
             "enterprise_status"

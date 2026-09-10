@@ -9,6 +9,7 @@ class BidDocumentCreate(BaseModel):
     file_path: str
     content_type: str | None = None
     file_size: int | None = None
+    file_hash: str | None = None
 
 
 class BidDocumentResponse(BaseModel):
@@ -19,6 +20,7 @@ class BidDocumentResponse(BaseModel):
     file_path: str
     content_type: str | None
     file_size: int | None
+    file_hash: str | None = None
     status: str
     uploaded_at: datetime
 
