@@ -30,7 +30,7 @@ def upgrade() -> None:
         sa.Column('recommendation_at_decision', sa.String(length=50), nullable=True),
         sa.Column('score_snapshot', sa.Float(), nullable=True),
         sa.Column('risk_snapshot', sa.String(length=50), nullable=True),
-        sa.Column('is_override', sa.Boolean(), nullable=False, server_default=sa.text('0')),
+        sa.Column('is_override', sa.Boolean(), nullable=False, server_default=sa.text('false')),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(['bid_submission_id'], ['bid_submissions.id'], ondelete='CASCADE'),

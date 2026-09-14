@@ -25,7 +25,7 @@ class Bidder(Base):
     )
 
     gstin: Mapped[str | None] = mapped_column(
-        String(15),
+        String(50),
         unique=True,
         nullable=True,
         index=True,

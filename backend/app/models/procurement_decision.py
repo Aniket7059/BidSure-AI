@@ -60,7 +60,7 @@ class ProcurementDecision(Base):
     )
 
     recommendation_at_decision: Mapped[str | None] = mapped_column(
-        String(50),
+        String(1000),
         nullable=True,
     )
 

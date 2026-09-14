@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     API_V1_PREFIX: str = "/api/v1"
 
-    DATABASE_URL: str = "sqlite:///./bidsure.db"
+    DATABASE_URL: str 
 
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
